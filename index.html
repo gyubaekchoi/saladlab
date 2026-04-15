@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>상단 고정 리뷰 순서 관리 — 와이어프레임</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+      background: #f5f5f7;
+      color: #1a1a1a;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    /* ── 페이지 레이아웃 ── */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .page-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: #999;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    /* ── 카드 ── */
+    .card {
+      background: #fff;
+      border: 1.5px solid #e0e0f0;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    /* ── 섹션 헤더 ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px 16px;
+      border-bottom: 1px solid #f0f0f5;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-icon {
+      color: #6C63FF;
+      font-size: 16px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .count-badge {
+      font-size: 13px;
+      font-weight: 700;
+      color: #6C63FF;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* ── AI 버튼 ── */
+    .btn-ai {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: #6C63FF;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn-ai:hover { background: #574fd6; transform: translateY(-1px); }
+    .btn-ai.active { background: #e8e6ff; color: #6C63FF; }
+    .btn-ai .sparkle { font-size: 14px; }
+
+    /* ── 자동 적용 토글 영역 ── */
+    .auto-apply-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+    }
+
+    .auto-apply-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .auto-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #555;
+      white-space: nowrap;
+    }
+
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      cursor: pointer;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: #ddd;
+      border-radius: 22px;
+      transition: background 0.2s;
+    }
+    .slider::before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .toggle input:checked + .slider { background: #6C63FF; }
+    .toggle input:checked + .slider::before { transform: translateX(18px); }
+
+    .auto-sub {
+      font-size: 11px;
+      color: #6C63FF;
+      font-weight: 500;
+      height: 14px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .auto-sub.visible { opacity: 1; }
+
+    /* ── AI 배너 (비교 모드 진입 시) ── */
+    .ai-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 24px;
+      background: #f3f1ff;
+      border-bottom: 1px solid #ddd8ff;
+      font-size: 12.5px;
+      color: #4a43c4;
+      font-weight: 500;
+    }
+    .ai-banner.visible { display: flex; }
+    .ai-banner .info-icon { font-size: 14px; }
+
+    .ai-banner .btn-close-ai {
+      margin-left: auto;
+      background: none;
+      border: 1px solid #b0a8f0;
+      color: #6C63FF;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .ai-banner .btn-close-ai:hover { background: #e8e6ff; }
+
+    /* ── 리뷰 리스트 ── */
+    .review-list { padding: 4px 0; }
+
+    .review-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 24px;
+      border-bottom: 1px solid #f5f5f8;
+      transition: background 0.15s;
+      position: relative;
+    }
+    .review-row:last-child { border-bottom: none; }
+    .review-row:hover { background: #fafafa; }
+
+    /* checkbox */
+    .row-check {
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .row-check input[type=checkbox] {
+      width: 16px;
+      height: 16px;
+      accent-color: #6C63FF;
+      cursor: pointer;
+    }
+    .compare-mode .row-check { display: flex; }
+
+    /* product thumb */
+    .thumb {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: #f0eeff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    /* meta */
+    .review-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .product-name {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #333;
+      white-space: nowrap;
+    }
+
+    .reviewer-name {
+      font-size: 12px;
+      color: #888;
+      white-space: nowrap;
+    }
+
+    .stars {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 12px;
+      color: #6C63FF;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .stars .star { color: #6C63FF; }
+
+    .review-text {
+      font-size: 12.5px;
+      color: #555;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* AI 추천 뱃지 */
+    .ai-move-badge {
+      display: none;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .ai-move-badge.up {
+      background: #edfaf3;
+      color: #1a9e5c;
+    }
+    .ai-move-badge.same {
+      background: #f5f5f8;
+      color: #999;
+    }
+    .ai-move-badge.down {
+      background: #fff1f0;
+      color: #e03030;
+    }
+    .compare-mode .ai-move-badge { display: inline-flex; align-items: center; gap: 4px; }
+
+    /* original link */
+    .link-original {
+      font-size: 12px;
+      color: #6C63FF;
+      text-decoration: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .link-original:hover { text-decoration: underline; }
+    .compare-mode .link-original { display: none; }
+
+    /* order controls */
+    .order-controls {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .compare-mode .order-controls { display: none; }
+
+    .order-btn {
+      width: 26px;
+      height: 26px;
+      border: 1px solid #e0e0ec;
+      border-radius: 6px;
+      background: #fff;
+      color: #7070a0;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.12s;
+    }
+    .order-btn:hover { background: #f0eeff; color: #6C63FF; }
+
+    .btn-more {
+      width: 26px;
+      height: 26px;
+      border: 1px solid #e0e0ec;
+      border-radius: 6px;
+      background: #fff;
+      color: #999;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-more:hover { background: #f5f5f8; }
+
+    /* ── 비교 모드 액션 바 ── */
+    .compare-action-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: #fafafa;
+      border-top: 1px solid #ededf5;
+    }
+    .compare-action-bar.visible { display: flex; }
+
+    .select-info {
+      font-size: 12.5px;
+      color: #777;
+    }
+    .select-info strong { color: #6C63FF; font-weight: 700; }
+
+    .action-btns {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-cancel {
+      padding: 8px 18px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #666;
+      cursor: pointer;
+    }
+    .btn-cancel:hover { background: #f5f5f8; }
+
+    .btn-apply {
+      padding: 8px 20px;
+      background: #6C63FF;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.15s;
+      min-width: 140px;
+      text-align: center;
+    }
+    .btn-apply:hover { background: #574fd6; }
+    .btn-apply:disabled { background: #c5c2f0; cursor: not-allowed; }
+
+    /* ── 하단 바 ── */
+    .section-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 24px;
+      border-top: 1px solid #f0f0f5;
+    }
+
+    .btn-collapse {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12.5px;
+      color: #666;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 7px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn-collapse:hover { background: #f5f5f8; }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .page-arrow {
+      width: 28px;
+      height: 28px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+    }
+    .page-arrow:hover { background: #f0eeff; color: #6C63FF; }
+
+    .page-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      color: #555;
+    }
+
+    .page-input {
+      width: 48px;
+      height: 28px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 12.5px;
+      color: #333;
+      background: #fff;
+    }
+
+    /* ── 자동 적용 설정 (토글 ON 시) ── */
+    .auto-config-panel {
+      display: none;
+      padding: 12px 24px 14px;
+      background: #f8f7ff;
+      border-top: 1px solid #ebe8ff;
+      font-size: 12.5px;
+      color: #555;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .auto-config-panel.visible { display: flex; }
+
+    .auto-config-label { font-weight: 600; color: #4a43c4; }
+
+    .select-small {
+      padding: 4px 10px;
+      border: 1px solid #c9c3f5;
+      border-radius: 7px;
+      background: #fff;
+      font-size: 12px;
+      color: #333;
+      cursor: pointer;
+      font-weight: 600;
+      outline: none;
+    }
+    .select-small:focus { border-color: #6C63FF; }
+
+    .auto-config-desc {
+      color: #888;
+    }
+
+    .last-applied {
+      margin-left: auto;
+      font-size: 11px;
+      color: #999;
+    }
+
+    /* ── 토스트 ── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1a1a2e;
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 100;
+      white-space: nowrap;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+  <div class="page-label">알파리뷰 — 상단 고정 리뷰 순서 관리 · 와이어프레임</div>
+
+  <div class="card" id="mainCard">
+
+    <!-- ── 섹션 헤더 ── -->
+    <div class="section-header">
+      <div class="header-left">
+        <span class="header-icon">✦</span>
+        <span class="section-title">상단 고정 리뷰</span>
+        <span class="count-badge">3개</span>
+      </div>
+
+      <div class="header-right">
+        <button class="btn-ai" id="btnAi" onclick="toggleCompareMode()">
+          <span class="sparkle">✨</span> AI 순서 추천 보기
+        </button>
+
+        <div class="auto-apply-wrap">
+          <div class="auto-apply-row">
+            <span class="auto-label">매주 자동 적용</span>
+            <label class="toggle">
+              <input type="checkbox" id="autoToggle" onchange="onAutoToggle(this)" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <span class="auto-sub" id="autoSubText">다음 적용: 월요일 09:00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 자동 적용 설정 패널 ── -->
+    <div class="auto-config-panel" id="autoConfigPanel">
+      <span class="auto-config-label">🔄 자동 적용 설정</span>
+      <span>매주</span>
+      <select class="select-small" id="selectDay">
+        <option>월요일</option>
+        <option>화요일</option>
+        <option>수요일</option>
+        <option>목요일</option>
+        <option>금요일</option>
+      </select>
+      <select class="select-small" id="selectTime">
+        <option>09:00</option>
+        <option>12:00</option>
+        <option>18:00</option>
+      </select>
+      <span class="auto-config-desc">에 AI 추천 순서가 자동 적용됩니다.</span>
+      <span class="last-applied">최근 적용: 2026.04.13 월요일 09:00</span>
+    </div>
+
+    <!-- ── AI 비교 배너 ── -->
+    <div class="ai-banner" id="aiBanner">
+      <span class="info-icon">✨</span>
+      <span>AI가 추천한 순서입니다. 반영할 항목을 선택한 뒤 적용하세요.</span>
+      <button class="btn-close-ai" onclick="exitCompareMode()">닫기</button>
+    </div>
+
+    <!-- ── 리뷰 목록 ── -->
+    <div class="review-list" id="reviewList">
+
+      <!-- row 1 -->
+      <div class="review-row" data-id="1">
+        <div class="row-check"><input type="checkbox" checked onchange="updateApplyBtn()" /></div>
+        <div class="thumb">🐶</div>
+        <div class="review-meta">
+          <span class="product-name">규백테스트상품</span>
+          <span class="reviewer-name">최규백</span>
+          <span class="stars"><span class="star">★</span> 5</span>
+          <span class="review-text">안녕하세요 저는 리뷰입니다.</span>
+        </div>
+        <span class="ai-move-badge up">↑ 3위 → 1위</span>
+        <a href="#" class="link-original">원본보기</a>
+        <div class="order-controls">
+          <button class="order-btn">⇈</button>
+          <button class="order-btn">↑</button>
+          <button class="order-btn">↓</button>
+          <button class="order-btn">⇊</button>
+          <button class="btn-more">···</button>
+        </div>
+      </div>
+
+      <!-- row 2 -->
+      <div class="review-row" data-id="2">
+        <div class="row-check"><input type="checkbox" checked onchange="updateApplyBtn()" /></div>
+        <div class="thumb">🐶</div>
+        <div class="review-meta">
+          <span class="product-name">규백테스트상품</span>
+          <span class="reviewer-name">다</span>
+          <span class="stars"><span class="star">★</span> 3</span>
+          <span class="review-text">나쁘지 않은 선택이었던 것 같아요 🔥🔥</span>
+        </div>
+        <span class="ai-move-badge same">→ 순위 유지</span>
+        <a href="#" class="link-original">원본보기</a>
+        <div class="order-controls">
+          <button class="order-btn">⇈</button>
+          <button class="order-btn">↑</button>
+          <button class="order-btn">↓</button>
+          <button class="order-btn">⇊</button>
+          <button class="btn-more">···</button>
+        </div>
+      </div>
+
+      <!-- row 3 -->
+      <div class="review-row" data-id="3">
+        <div class="row-check"><input type="checkbox" onchange="updateApplyBtn()" /></div>
+        <div class="thumb">🐶</div>
+        <div class="review-meta">
+          <span class="product-name">규백테스트상품</span>
+          <span class="reviewer-name">자</span>
+          <span class="stars"><span class="star">★</span> 2</span>
+          <span class="review-text">솔직히 조금 실망했어요. 다음 번엔 더 좋은 상품 부탁드려요</span>
+        </div>
+        <span class="ai-move-badge down">↓ 2위 → 3위</span>
+        <a href="#" class="link-original">원본보기</a>
+        <div class="order-controls">
+          <button class="order-btn">⇈</button>
+          <button class="order-btn">↑</button>
+          <button class="order-btn">↓</button>
+          <button class="order-btn">⇊</button>
+          <button class="btn-more">···</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── 비교 모드 액션 바 ── -->
+    <div class="compare-action-bar" id="compareActionBar">
+      <span class="select-info" id="selectInfoText"><strong>2개</strong> 항목 선택됨</span>
+      <div class="action-btns">
+        <button class="btn-cancel" onclick="exitCompareMode()">취소</button>
+        <button class="btn-apply" id="btnApply" onclick="applySelection()">2개 항목 적용하기</button>
+      </div>
+    </div>
+
+    <!-- ── 섹션 푸터 ── -->
+    <div class="section-footer">
+      <button class="btn-collapse">↑ 접기</button>
+      <div class="pagination">
+        <button class="page-arrow">‹</button>
+        <div class="page-input-wrap">
+          <input class="page-input" type="text" value="1" readonly /> / 1
+        </div>
+        <button class="page-arrow">›</button>
+      </div>
+    </div>
+
+  </div><!-- /card -->
+</div><!-- /wrapper -->
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
+<script>
+  let compareMode = false;
+
+  function toggleCompareMode() {
+    if (!compareMode) enterCompareMode();
+    else exitCompareMode();
+  }
+
+  function enterCompareMode() {
+    compareMode = true;
+    document.getElementById('reviewList').classList.add('compare-mode');
+    document.getElementById('aiBanner').classList.add('visible');
+    document.getElementById('compareActionBar').classList.add('visible');
+    const btn = document.getElementById('btnAi');
+    btn.classList.add('active');
+    btn.innerHTML = '<span class="sparkle">✨</span> AI 추천 비교 중';
+    updateApplyBtn();
+  }
+
+  function exitCompareMode() {
+    compareMode = false;
+    document.getElementById('reviewList').classList.remove('compare-mode');
+    document.getElementById('aiBanner').classList.remove('visible');
+    document.getElementById('compareActionBar').classList.remove('visible');
+    const btn = document.getElementById('btnAi');
+    btn.classList.remove('active');
+    btn.innerHTML = '<span class="sparkle">✨</span> AI 순서 추천 보기';
+  }
+
+  function updateApplyBtn() {
+    const checks = document.querySelectorAll('#reviewList input[type=checkbox]');
+    const count = Array.from(checks).filter(c => c.checked).length;
+    const btn = document.getElementById('btnApply');
+    const info = document.getElementById('selectInfoText');
+
+    info.innerHTML = `<strong>${count}개</strong> 항목 선택됨`;
+
+    if (count === 0) {
+      btn.textContent = '항목을 선택해주세요';
+      btn.disabled = true;
+    } else {
+      btn.textContent = `${count}개 항목 적용하기`;
+      btn.disabled = false;
+    }
+  }
+
+  function applySelection() {
+    const checks = document.querySelectorAll('#reviewList input[type=checkbox]');
+    const count = Array.from(checks).filter(c => c.checked).length;
+    showToast(`✅ AI 추천 순서 ${count}개 항목이 적용됐어요.`);
+    exitCompareMode();
+  }
+
+  function onAutoToggle(el) {
+    const panel = document.getElementById('autoConfigPanel');
+    const sub = document.getElementById('autoSubText');
+    if (el.checked) {
+      panel.classList.add('visible');
+      sub.classList.add('visible');
+      updateSubText();
+    } else {
+      panel.classList.remove('visible');
+      sub.classList.remove('visible');
+      showToast('자동 적용이 꺼졌어요.');
+    }
+  }
+
+  function updateSubText() {
+    const day = document.getElementById('selectDay').value;
+    const time = document.getElementById('selectTime').value;
+    document.getElementById('autoSubText').textContent = `다음 적용: ${day} ${time}`;
+    showToast(`🔄 매주 ${day} ${time}에 자동 적용 설정됐어요.`);
+  }
+
+  document.getElementById('selectDay').addEventListener('change', updateSubText);
+  document.getElementById('selectTime').addEventListener('change', updateSubText);
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+</script>
+</body>
+</html>
