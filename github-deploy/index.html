@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>알파리뷰 무료 버전 — 와이어프레임</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
+    background: #F5F5F5;
+    color: #000;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* Top System Tab */
+  .system-tab {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #FFF;
+    border-bottom: 2px solid #000;
+    padding: 0;
+  }
+  .system-tab-header {
+    padding: 16px 32px 0 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid #E5E5E5;
+    padding-bottom: 12px;
+  }
+  .system-tab-title { font-size: 14px; font-weight: 600; letter-spacing: -0.2px; }
+  .system-tab-meta { font-size: 11px; color: #666; }
+  .system-tab-nav {
+    display: flex;
+    padding: 0 32px;
+    gap: 0;
+    overflow-x: auto;
+  }
+  .system-tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 14px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: #666;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .system-tab-btn:hover { color: #000; }
+  .system-tab-btn.active {
+    color: #000;
+    border-bottom-color: #000;
+    font-weight: 600;
+  }
+
+  /* Canvas */
+  .canvas {
+    padding: 40px 32px 80px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .screen-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .screen-desc {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed #CCC;
+  }
+
+  /* Wireframe Primitives */
+  .wf { border: 1.5px solid #000; background: #FFF; }
+  .wf-dashed { border: 1.5px dashed #999; background: #FAFAFA; }
+  .wf-filled { background: #E8E8E8; border: 1.5px solid #000; }
+  .wf-dark { background: #000; color: #FFF; }
+
+  .wf-label { font-size: 11px; color: #666; margin-bottom: 6px; display: block; }
+  .wf-note {
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+    padding: 6px 10px;
+    border-left: 2px solid #999;
+    background: #F9F9F9;
+    margin-top: 8px;
+  }
+
+  .wf-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border: 1.5px solid #000;
+    background: #FFF;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .wf-btn.primary { background: #000; color: #FFF; }
+  .wf-btn.tertiary { background: transparent; border: none; text-decoration: underline; }
+
+  .wf-text-line {
+    height: 8px;
+    background: #D0D0D0;
+    margin: 6px 0;
+    border-radius: 0;
+  }
+  .wf-text-line.short { width: 40%; }
+  .wf-text-line.mid { width: 65%; }
+  .wf-text-line.long { width: 90%; }
+
+  .wf-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid #000;
+    background: #FFF;
+    vertical-align: middle;
+    text-align: center;
+    line-height: 13px;
+    font-size: 10px;
+  }
+  .wf-icon.lock::before { content: "🔒"; filter: grayscale(1); }
+  .wf-icon.filled { background: #000; color: #FFF; }
+
+  /* Layout helpers */
+  .row { display: flex; gap: 16px; }
+  .col { flex: 1; }
+  .stack > * + * { margin-top: 16px; }
+
+  /* ─────── Onboarding ─────── */
+  .onb-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .onb-steps {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+  .onb-step {
+    border: 1.5px solid #000;
+    background: #FFF;
+    padding: 24px;
+    min-height: 360px;
+    position: relative;
+  }
+  .onb-step-label {
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    background: #000;
+    color: #FFF;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .onb-step-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  .onb-progress {
+    display: flex;
+    gap: 4px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px dashed #CCC;
+  }
+  .onb-progress-dot {
+    flex: 1;
+    height: 4px;
+    background: #E5E5E5;
+  }
+  .onb-progress-dot.active { background: #000; }
+
+  /* ─────── Review List ─────── */
+  .app-frame {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    border: 1.5px solid #000;
+    background: #FFF;
+    min-height: 720px;
+  }
+  .app-sidebar {
+    border-right: 1.5px solid #000;
+    padding: 16px 0;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-logo {
+    padding: 0 16px 16px;
+    border-bottom: 1px dashed #CCC;
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+  .nav-item {
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: default;
+  }
+  .nav-item.parent { font-weight: 600; margin-top: 8px; }
+  .nav-item.child { padding-left: 28px; color: #444; }
+  .nav-item.locked { color: #999; }
+  .nav-item.active { background: #000; color: #FFF; }
+  .nav-divider {
+    height: 1px;
+    background: #E5E5E5;
+    margin: 12px 16px;
+  }
+  .lnb-cta {
+    margin: auto 16px 0;
+    padding: 12px;
+    border: 1.5px solid #000;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    background: #000;
+    color: #FFF;
+  }
+
+  .app-main { padding: 0; display: flex; flex-direction: column; }
+  .top-banner {
+    background: #000;
+    color: #FFF;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+  }
+  .top-banner .wf-btn { background: #FFF; color: #000; border-color: #FFF; }
+
+  .page-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #E5E5E5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .page-title { font-size: 18px; font-weight: 700; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 20px 24px;
+    background: #FAFAFA;
+  }
+  .summary-card {
+    border: 1.5px solid #000;
+    background: #FFF;
+    padding: 20px;
+  }
+  .summary-card-title {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 12px;
+  }
+  .quota-bar {
+    width: 100%;
+    height: 8px;
+    background: #EEE;
+    border: 1.5px solid #000;
+    position: relative;
+  }
+  .quota-bar-fill {
+    height: 100%;
+    background: #000;
+    width: 60%;
+  }
+  .quota-numbers {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .quota-number-big { font-size: 24px; font-weight: 700; }
+  .quota-caption { font-size: 11px; color: #666; margin-top: 8px; }
+
+  .stat-row { display: flex; gap: 24px; align-items: baseline; }
+  .stat-item { flex: 1; }
+  .stat-big { font-size: 22px; font-weight: 700; }
+  .stat-label { font-size: 11px; color: #666; }
+  .stat-delta { font-size: 11px; padding: 2px 6px; border: 1px solid #000; display: inline-block; margin-top: 4px; }
+
+  .toolbar {
+    padding: 12px 24px;
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid #E5E5E5;
+  }
+  .toolbar-item {
+    padding: 6px 12px;
+    border: 1.5px solid #000;
+    font-size: 12px;
+    background: #FFF;
+  }
+  .toolbar-item.search { flex: 1; min-width: 200px; color: #999; }
+
+  .review-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .review-table th, .review-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #E5E5E5;
+    text-align: left;
+  }
+  .review-table th {
+    background: #FAFAFA;
+    font-weight: 600;
+    font-size: 11px;
+    color: #666;
+  }
+  .review-table .lock-cell { color: #999; }
+
+  .pagination {
+    padding: 16px 24px;
+    text-align: center;
+    font-size: 12px;
+    color: #666;
+  }
+
+  /* ─────── Modal ─────── */
+  .modal-stage {
+    background: #F0F0F0;
+    border: 1.5px dashed #999;
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 520px;
+  }
+  .modal {
+    width: 480px;
+    background: #FFF;
+    border: 1.5px solid #000;
+    position: relative;
+  }
+  .modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #000;
+    background: #FFF;
+    text-align: center;
+    font-size: 12px;
+    line-height: 18px;
+  }
+  .modal-visual {
+    height: 180px;
+    background: #E8E8E8;
+    border-bottom: 1.5px solid #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-size: 11px;
+  }
+  .modal-body { padding: 24px; }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+  .modal-sub { font-size: 12px; color: #666; margin-bottom: 16px; }
+  .modal-ctas {
+    display: flex;
+    gap: 8px;
+    padding: 0 24px 24px;
+    justify-content: flex-end;
+    align-items: center;
+  }
+  .modal-ctas.stack-v {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .modal-ctas.stack-v .wf-btn { width: 100%; }
+
+  .bullet-list { margin: 12px 0 16px; padding-left: 18px; font-size: 12px; }
+  .bullet-list li { margin-bottom: 6px; }
+
+  .metric-highlight {
+    padding: 14px;
+    border: 1.5px solid #000;
+    margin: 12px 0;
+    text-align: center;
+  }
+  .metric-highlight-num { font-size: 28px; font-weight: 700; }
+  .metric-highlight-label { font-size: 11px; color: #666; margin-top: 4px; }
+
+  .modal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .modal-grid .modal-stage { padding: 24px; min-height: 600px; }
+  .modal-grid .modal { width: 100%; max-width: 340px; }
+
+  .section-label {
+    font-size: 12px;
+    font-weight: 600;
+    margin: 24px 0 10px;
+    padding-top: 16px;
+    border-top: 1px solid #E5E5E5;
+  }
+
+  /* ─────── LNB Screen ─────── */
+  .lnb-showcase {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 24px;
+  }
+  .lnb-detail {
+    border: 1.5px solid #000;
+    background: #FFF;
+    padding: 16px 0;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #FFF;
+    border: 1px dashed #999;
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 14px; height: 14px; border: 1.5px solid #000; }
+
+</style>
+</head>
+<body>
+
+<!-- System Tab -->
+<div class="system-tab">
+  <div class="system-tab-header">
+    <div>
+      <div class="system-tab-title">알파리뷰 · 무료 버전 와이어프레임</div>
+      <div class="system-tab-meta">v0.1 · 구조 파악용 흑백 시안 · 2026.04.21</div>
+    </div>
+    <div class="system-tab-meta">담당: 규백</div>
+  </div>
+  <div class="system-tab-nav">
+    <button class="system-tab-btn active" data-screen="onboarding">01 · 온보딩</button>
+    <button class="system-tab-btn" data-screen="review-list">02 · 리뷰 목록</button>
+    <button class="system-tab-btn" data-screen="lnb">03 · LNB + 띠배너</button>
+    <button class="system-tab-btn" data-screen="modals">04 · 넛지 모달 3종</button>
+  </div>
+</div>
+
+<div class="canvas">
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><span class="legend-swatch"></span>기본 컨테이너</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#E8E8E8"></span>이미지/비주얼 placeholder</div>
+    <div class="legend-item"><span class="legend-swatch" style="border-style:dashed;background:#FAFAFA"></span>보조/샘플 영역</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#000"></span>Primary CTA · 활성</div>
+  </div>
+
+  <!-- ═══════ 01 온보딩 ═══════ -->
+  <section class="screen active" id="onboarding">
+    <div class="screen-title">01 · 온보딩 (무료 버전 전용)</div>
+    <div class="screen-desc">카드 미등록 상태에서도 설치를 완료시키는 4-step 플로우. 각 스텝은 이탈 시 자동 저장.</div>
+
+    <div class="onb-container">
+      <div class="onb-steps">
+
+        <!-- Step 1 -->
+        <div class="onb-step">
+          <div class="onb-step-label">STEP 1 / 4</div>
+          <div class="onb-step-title">샵 연동</div>
+          <span class="wf-label">플랫폼 선택</span>
+          <div class="stack">
+            <div class="wf" style="padding:14px;">카페24</div>
+            <div class="wf" style="padding:14px;">쇼피파이</div>
+            <div class="wf" style="padding:14px;">스마트스토어</div>
+            <div class="wf-dashed" style="padding:14px;">기타 플랫폼</div>
+          </div>
+          <div class="onb-progress">
+            <div class="onb-progress-dot active"></div>
+            <div class="onb-progress-dot"></div>
+            <div class="onb-progress-dot"></div>
+            <div class="onb-progress-dot"></div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="onb-step">
+          <div class="onb-step-label">STEP 2 / 4</div>
+          <div class="onb-step-title">브랜드 기본 정보</div>
+          <span class="wf-label">샵 이름</span>
+          <div class="wf" style="height:36px;margin-bottom:14px;"></div>
+          <span class="wf-label">대표 색상</span>
+          <div class="row" style="gap:8px;margin-bottom:14px;">
+            <div class="wf" style="width:32px;height:32px;"></div>
+            <div class="wf" style="width:32px;height:32px;background:#333;"></div>
+            <div class="wf" style="width:32px;height:32px;background:#666;"></div>
+            <div class="wf" style="width:32px;height:32px;background:#999;"></div>
+          </div>
+          <span class="wf-label">로고 (선택)</span>
+          <div class="wf-dashed" style="height:60px;display:flex;align-items:center;justify-content:center;color:#999;">+ 업로드</div>
+          <div style="display:flex;gap:8px;margin-top:16px;">
+            <span class="wf-btn tertiary">나중에 설정할게요</span>
+            <span class="wf-btn primary" style="margin-left:auto;">다음</span>
+          </div>
+          <div class="onb-progress">
+            <div class="onb-progress-dot active"></div>
+            <div class="onb-progress-dot active"></div>
+            <div class="onb-progress-dot"></div>
+            <div class="onb-progress-dot"></div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="onb-step">
+          <div class="onb-step-label">STEP 3 / 4</div>
+          <div class="onb-step-title">위젯 설치 안내</div>
+          <div class="row" style="gap:12px;">
+            <div class="col">
+              <span class="wf-label">설치 체크리스트</span>
+              <div class="stack">
+                <div class="wf" style="padding:10px;">☑ 스크립트 복사</div>
+                <div class="wf" style="padding:10px;">☐ 쇼핑몰 관리자에 붙여넣기</div>
+                <div class="wf" style="padding:10px;">☐ 자동 감지 대기</div>
+              </div>
+            </div>
+            <div class="col">
+              <span class="wf-label">실시간 상태</span>
+              <div class="wf-dashed" style="padding:20px;text-align:center;font-size:11px;color:#666;min-height:120px;display:flex;align-items:center;justify-content:center;">감지 대기 중...</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:16px;">
+            <span class="wf-btn">건너뛰고 먼저 둘러보기</span>
+            <span class="wf-btn primary" style="margin-left:auto;">설치 확인</span>
+          </div>
+          <div class="onb-progress">
+            <div class="onb-progress-dot active"></div>
+            <div class="onb-progress-dot active"></div>
+            <div class="onb-progress-dot active"></div>
+            <div class="onb-progress-dot"></div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="onb-step">
+          <div class="onb-step-label">STEP 4 / 4</div>
+          <div class="onb-step-title">무료 버전 시작</div>
+          <div class="wf-filled" style="height:100px;display:flex;align-items:center;justify-content:center;color:#666;font-size:11px;margin-bottom:16px;">완료 일러스트</div>
+          <div style="font-weight:600;margin-bottom:8px;">준비됐어요.<br>지금부터 알파리뷰를 둘러보세요.</div>
+          <div style="font-size:12px;color:#666;margin-bottom:20px;">무료 버전에서는 월 30건의 리뷰 요청을 체험할 수 있어요.</div>
+          <div class="stack">
+            <span class="wf-btn primary" style="width:100%;">리뷰 목록으로 이동</span>
+            <span class="wf-btn" style="width:100%;">카드 등록하고 알림톡 바로 받기</span>
+          </div>
+          <div class="onb-progress">
+            <div class="onb-progress-dot active"></div>
+            <div class="onb-progress-dot active"></div>
+            <div class="onb-progress-dot active"></div>
+            <div class="onb-progress-dot active"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="wf-note" style="margin-top:24px;">
+        설치 자체는 Step 4 완료 시점에 진행됨. 카드 등록은 이후 최초 "리뷰 요청" 시도 시점에 인라인 유도.
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 02 리뷰 목록 ═══════ -->
+  <section class="screen" id="review-list">
+    <div class="screen-title">02 · 리뷰 목록 (할당량 · 현황 요약)</div>
+    <div class="screen-desc">무료 유저의 메인 화면. 상단 요약 영역에 유료 관련 정보가 집중되고, 하단 리스트는 기능에 충실.</div>
+
+    <div class="app-frame">
+
+      <!-- Sidebar (축약) -->
+      <div class="app-sidebar">
+        <div class="app-logo">ALPHA REVIEW</div>
+        <div class="nav-item">대시보드</div>
+        <div class="nav-item active">리뷰 목록</div>
+        <div class="nav-item parent">리뷰 수집</div>
+        <div class="nav-item child">스태프 리뷰</div>
+        <div class="nav-item child">인스타 &amp; 블로그</div>
+        <div class="nav-item child locked">리뷰 요청 <span>🔒</span></div>
+        <div class="nav-item parent">디자인 설정</div>
+        <div class="nav-item parent">기본 설정</div>
+        <div class="nav-divider"></div>
+        <div class="nav-item locked">AI 리뷰 분석 <span>🔒</span></div>
+        <div class="nav-item locked">통계 <span>🔒</span></div>
+        <div style="flex:1;"></div>
+        <div class="lnb-cta">14일 무료 체험 시작</div>
+      </div>
+
+      <!-- Main -->
+      <div class="app-main">
+
+        <div class="page-header">
+          <div class="page-title">리뷰 목록</div>
+          <div style="display:flex;gap:8px;">
+            <span class="wf-btn">내보내기</span>
+            <span class="wf-btn primary">리뷰 요청 보내기</span>
+          </div>
+        </div>
+
+        <!-- (A) Summary Grid -->
+        <div class="summary-grid">
+          <!-- 좌: 할당량 -->
+          <div class="summary-card">
+            <div class="summary-card-title">이번 달 무료 리뷰 요청</div>
+            <div class="quota-numbers">
+              <div><span class="quota-number-big">18</span> <span style="color:#999;">/ 30</span></div>
+              <div class="stat-delta">잔여 12건</div>
+            </div>
+            <div class="quota-bar"><div class="quota-bar-fill"></div></div>
+            <div class="quota-caption">할당량을 모두 사용하면 14일 무료 체험으로 전환을 안내해 드려요.</div>
+          </div>
+
+          <!-- 우: 현황 카드 -->
+          <div class="summary-card">
+            <div class="summary-card-title">이번 달 성과 (핵심 2지표)</div>
+            <div class="stat-row">
+              <div class="stat-item">
+                <div class="stat-big">42<span style="font-size:14px;">%</span></div>
+                <div class="stat-label">리뷰 작성률</div>
+                <div class="stat-delta">+5.2%p</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-big">18<span style="font-size:14px;">%</span></div>
+                <div class="stat-label">리뷰 작성 후 구매 전환율</div>
+                <div class="stat-delta">+1.8%p</div>
+              </div>
+            </div>
+            <div class="quota-caption" style="margin-top:14px;text-decoration:underline;cursor:pointer;">
+              알파리뷰 고객 평균과 비교하기 →
+            </div>
+          </div>
+        </div>
+
+        <!-- (B) Toolbar -->
+        <div class="toolbar">
+          <div class="toolbar-item search">🔍 리뷰 내용 · 작성자 검색</div>
+          <div class="toolbar-item">기간 ▾</div>
+          <div class="toolbar-item">별점 ▾</div>
+          <div class="toolbar-item">채널 ▾</div>
+          <div class="toolbar-item" style="margin-left:auto;">정렬 ▾</div>
+        </div>
+
+        <!-- (C) Table -->
+        <table class="review-table">
+          <thead>
+            <tr>
+              <th>작성일</th>
+              <th>상품</th>
+              <th>별점</th>
+              <th>리뷰 내용</th>
+              <th>작성자</th>
+              <th>채널</th>
+              <th>액션</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>04.20</td>
+              <td>기본 티셔츠</td>
+              <td>★★★★★</td>
+              <td>색감이 사진이랑 똑같아서 좋아요.</td>
+              <td>김**</td>
+              <td>인스타</td>
+              <td class="lock-cell">뱃지 🔒 · 댓글 🔒</td>
+            </tr>
+            <tr>
+              <td>04.19</td>
+              <td>무지 후디</td>
+              <td>★★★★☆</td>
+              <td>핏이 여유있어요. 키 170 기준 M추천.</td>
+              <td>이**</td>
+              <td>스마트스토어</td>
+              <td class="lock-cell">뱃지 🔒 · 댓글 🔒</td>
+            </tr>
+            <tr>
+              <td>04.18</td>
+              <td>데일리 백</td>
+              <td>★★★★★</td>
+              <td>노트북 14인치까지 들어가요.</td>
+              <td>박**</td>
+              <td>블로그</td>
+              <td class="lock-cell">뱃지 🔒 · 댓글 🔒</td>
+            </tr>
+            <tr>
+              <td>04.17</td>
+              <td>기본 티셔츠</td>
+              <td>★★★☆☆</td>
+              <td>면 소재가 얇은 편.</td>
+              <td>최**</td>
+              <td>인스타</td>
+              <td class="lock-cell">뱃지 🔒 · 댓글 🔒</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="pagination">1 · 2 · 3 ... 12</div>
+
+      </div>
+    </div>
+
+    <div class="wf-note" style="margin-top:16px;">
+      "놓친 리뷰 수 / 예상 효과 / A·B 비교" 지표는 이 메인 화면에서 제외. 현황 카드의 "고객 평균과 비교" 링크로 진입하는 별도 뷰에서 노출.
+    </div>
+  </section>
+
+  <!-- ═══════ 03 LNB + 띠배너 ═══════ -->
+  <section class="screen" id="lnb">
+    <div class="screen-title">03 · LNB + 상단 띠배너</div>
+    <div class="screen-desc">자물쇠 노출 최소화 원칙. 대분류 통잠금은 대분류에만 표시, 혼합 영역만 소메뉴별로 표시.</div>
+
+    <div class="lnb-showcase">
+
+      <!-- LNB 상세 -->
+      <div>
+        <div class="wf-label" style="font-weight:600;font-size:13px;color:#000;">LNB 구조</div>
+        <div class="lnb-detail">
+          <div class="app-logo" style="padding:0 16px 16px;border-bottom:1px dashed #CCC;margin-bottom:12px;font-weight:700;">ALPHA REVIEW</div>
+          <div class="nav-item">대시보드</div>
+          <div class="nav-item active">리뷰 목록</div>
+
+          <div class="nav-item parent">리뷰 수집</div>
+          <div class="nav-item child">스태프 리뷰</div>
+          <div class="nav-item child">인스타 &amp; 블로그</div>
+          <div class="nav-item child">스마트 스토어</div>
+          <div class="nav-item child locked">리뷰 요청 🔒</div>
+          <div class="nav-item child locked">SNS 리뷰 챌린지 🔒</div>
+          <div class="nav-item child locked">체험단 리뷰 🔒</div>
+
+          <div class="nav-item parent">디자인 설정</div>
+          <div class="nav-item child">공통 디자인</div>
+          <div class="nav-item child">리뷰 상세 화면</div>
+          <div class="nav-item child">리뷰 작성 유도</div>
+          <div class="nav-item child locked">세일즈 티커 🔒</div>
+          <div class="nav-item child locked">키워드 위젯 🔒</div>
+
+          <div class="nav-item parent">기본 설정</div>
+
+          <div class="nav-divider"></div>
+
+          <div class="nav-item locked">AI 리뷰 분석 🔒</div>
+          <div class="nav-item locked">통계 🔒</div>
+
+          <div style="padding:16px;margin-top:12px;">
+            <div class="lnb-cta" style="margin:0;">🎁 14일 무료 체험 시작하기</div>
+          </div>
+        </div>
+        <div class="wf-note">
+          AI · 통계는 <strong>대분류 레벨 잠금</strong>. 하위 메뉴를 펼치지 않아 자물쇠 오염 방지.
+        </div>
+      </div>
+
+      <!-- 띠배너 컨텍스트 -->
+      <div>
+        <div class="wf-label" style="font-weight:600;font-size:13px;color:#000;">띠배너 노출 예시 — 유료 기능 "둘러보기"</div>
+
+        <div style="border:1.5px solid #000;background:#FFF;overflow:hidden;">
+          <!-- Banner -->
+          <div class="top-banner">
+            <div>🔒 지금 보고 있는 화면은 유료 기능이에요. 14일 무료로 실제 사용해보세요.</div>
+            <div style="display:flex;gap:12px;align-items:center;">
+              <span class="wf-btn" style="background:#FFF;color:#000;border-color:#FFF;">14일 무료 체험</span>
+              <span style="cursor:pointer;">✕</span>
+            </div>
+          </div>
+
+          <!-- Preview 본문 -->
+          <div style="padding:24px;">
+            <div style="font-size:16px;font-weight:700;margin-bottom:4px;">리뷰 뱃지 설정</div>
+            <div class="wf-label">미리보기 모드 — 편집은 무료 체험 시작 후 가능</div>
+
+            <div class="wf-dashed" style="height:160px;margin:16px 0;display:flex;align-items:center;justify-content:center;color:#999;font-size:11px;">
+              뱃지 프리뷰 영역
+            </div>
+
+            <div class="wf-label">뱃지 조건</div>
+            <div class="wf" style="padding:10px;opacity:0.6;margin-bottom:6px;">구매 확정 + 별점 4 이상</div>
+            <div class="wf" style="padding:10px;opacity:0.6;margin-bottom:6px;">포토 리뷰</div>
+            <div class="wf" style="padding:10px;opacity:0.6;">300자 이상</div>
+          </div>
+        </div>
+
+        <div class="section-label">띠배너 노출 규칙</div>
+        <div style="font-size:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="wf" style="padding:10px;">✅ 유료 기능 둘러보기 화면</div>
+            <div class="wf" style="padding:10px;">✅ 할당량 초과 상태의 무료 기능</div>
+            <div class="wf-dashed" style="padding:10px;">❌ 기본 제공 화면 (리뷰 목록 등)</div>
+            <div class="wf-dashed" style="padding:10px;">❌ 온보딩 진행 중</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════ 04 모달 3종 ═══════ -->
+  <section class="screen" id="modals">
+    <div class="screen-title">04 · 넛지 모달 3종</div>
+    <div class="screen-desc">모든 모달은 동일한 구조 (비주얼 → 제목 → 본문 → CTA). 톤은 "차단 경고"가 아닌 "제안".</div>
+
+    <div class="modal-grid">
+
+      <!-- Modal A -->
+      <div>
+        <div class="wf-label" style="font-weight:600;font-size:13px;color:#000;margin-bottom:8px;">A · 기능 설명</div>
+        <div class="wf-label">트리거: 자물쇠 메뉴 클릭</div>
+        <div class="modal-stage">
+          <div class="modal">
+            <div class="modal-close">✕</div>
+            <div class="modal-visual">기능 스크린샷 / GIF</div>
+            <div class="modal-body">
+              <div class="modal-title">월간 리뷰 브리핑</div>
+              <div class="modal-sub">이번 달 고객이 뭘 좋아했는지 AI가 요약해드려요</div>
+              <ul class="bullet-list">
+                <li>카테고리별 긍·부정 흐름</li>
+                <li>개선 우선순위 상위 3개 상품</li>
+                <li>경쟁사 대비 브랜드 인식</li>
+              </ul>
+            </div>
+            <div class="modal-ctas stack-v">
+              <span class="wf-btn primary">14일 무료로 사용하기</span>
+              <span class="wf-btn tertiary">둘러보기만 할게요</span>
+            </div>
+          </div>
+        </div>
+        <div class="wf-note">
+          "둘러보기"는 AI · 통계는 불가, 뱃지 · 댓글 · 위젯류만 허용.
+        </div>
+      </div>
+
+      <!-- Modal B -->
+      <div>
+        <div class="wf-label" style="font-weight:600;font-size:13px;color:#000;margin-bottom:8px;">B · 사용량 제한 도달</div>
+        <div class="wf-label">트리거: 할당량 100% 소진 후 재시도</div>
+        <div class="modal-stage">
+          <div class="modal">
+            <div class="modal-close">✕</div>
+            <div class="modal-visual">게이지 풀 일러스트</div>
+            <div class="modal-body">
+              <div class="modal-title">이번 달 무료 할당량을<br>모두 사용했어요</div>
+              <div class="modal-sub">14일 무료 체험으로 리뷰 요청을 제한 없이 보내보세요. 체험 종료 전에 이메일로 알려드려요.</div>
+            </div>
+            <div class="modal-ctas stack-v">
+              <span class="wf-btn primary">14일 무료 체험 시작</span>
+              <span class="wf-btn tertiary">다음 달까지 기다릴게요</span>
+            </div>
+          </div>
+        </div>
+        <div class="wf-note">
+          놓친 개수, 예상 %, A/B 비교 같은 지표는 모달에 중복 배치하지 않음.
+        </div>
+      </div>
+
+      <!-- Modal C -->
+      <div>
+        <div class="wf-label" style="font-weight:600;font-size:13px;color:#000;margin-bottom:8px;">C · 무료 체험 제안</div>
+        <div class="wf-label">트리거: 진입 불가 기능 클릭 · 할당량 인디케이터 CTA</div>
+        <div class="modal-stage">
+          <div class="modal">
+            <div class="modal-close">✕</div>
+            <div class="modal-visual">기능 감각 비주얼 (대형)</div>
+            <div class="modal-body">
+              <div class="modal-title">SNS로 리뷰 수집을<br>확장해보세요</div>
+              <div class="modal-sub">인스타 챌린지로 고객이 스스로 콘텐츠를 만드는 구조를 만들 수 있어요.</div>
+              <div class="metric-highlight">
+                <div class="metric-highlight-num">+37%</div>
+                <div class="metric-highlight-label">평균 리뷰 작성률 향상 (도입 고객 기준)</div>
+              </div>
+              <div style="font-size:11px;color:#666;">월 ₩XX,XXX부터 · 언제든 해지 가능</div>
+            </div>
+            <div class="modal-ctas stack-v">
+              <span class="wf-btn primary">14일 무료 체험 시작</span>
+              <span class="wf-btn">요금제 자세히 보기</span>
+              <span class="wf-btn tertiary">나중에 할게요</span>
+            </div>
+          </div>
+        </div>
+        <div class="wf-note">
+          예상 효과는 <strong>1지표만</strong>. 여러 숫자 나열 금지.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="section-label">공통 사양 · 구조</div>
+    <div class="row">
+      <div class="col wf" style="padding:16px;">
+        <div style="font-weight:600;margin-bottom:8px;">레이아웃</div>
+        <div style="font-size:12px;color:#666;">• 너비 480px (모바일 대응 시 90vw)<br>• 중앙 정렬 · 배경 오버레이 40%<br>• 바깥 클릭 시 닫힘<br>• 우상단 ✕ (20×20)</div>
+      </div>
+      <div class="col wf" style="padding:16px;">
+        <div style="font-weight:600;margin-bottom:8px;">구조 순서 (고정)</div>
+        <div style="font-size:12px;color:#666;">① 비주얼 (이미지/GIF/일러스트)<br>② 제목 (2줄 이내)<br>③ 본문 (Bullet 3개 이하 또는 지표 1개)<br>④ CTA 그룹</div>
+      </div>
+      <div class="col wf" style="padding:16px;">
+        <div style="font-weight:600;margin-bottom:8px;">톤 규칙</div>
+        <div style="font-size:12px;color:#666;">• 느낌표 금지<br>• "놓친 / 손해" 단어 금지<br>• "14일 무료 체험"을 기본 CTA 카피로 통일<br>• 결제 불안 해소 문구 병기</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const buttons = document.querySelectorAll('.system-tab-btn');
+  const screens = document.querySelectorAll('.screen');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.screen;
+      buttons.forEach(b => b.classList.toggle('active', b === btn));
+      screens.forEach(s => s.classList.toggle('active', s.id === target));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+</script>
+
+</body>
+</html>
